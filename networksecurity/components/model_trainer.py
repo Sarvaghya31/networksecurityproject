@@ -45,11 +45,11 @@ class ModelTrainer:
         except Exception as e:
             raise NetworkSecurityException(e,sys)
         
-    def track_mlflow(self,best_model,classificationmetric):
+    def track_mlflow(self,best_model,classificationmetric,run_name):
         
         # mlflow.set_registry_uri("https://dagshub.com/krishnaik06/networksecurity.mlflow")
         # tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
-         with mlflow.start_run():
+         with mlflow.start_run(run_name=run_name):
             f1_score=classificationmetric.f1_score
             precision_score=classificationmetric.precision_score
             recall_score=classificationmetric.recall_score
@@ -60,8 +60,9 @@ class ModelTrainer:
             mlflow.log_metric("precision",precision_score)
             mlflow.log_metric("recall_score",recall_score)
             # mlflow.sklearn.log_model(best_model,"model") this is for only mlflow
-            joblib.dump(best_model, "model.pkl") #this is for dagshub
-            mlflow.log_artifact("model.pkl")#this is for dagshub
+            joblib.dump(best_model, f"dagshubstore/model_{run_name}.pkl") #this is for dagshub
+            mlflow.log_artifact(f"dagshubstore/model_{run_name}.pkl")#this is for dagshub
+            #because of this only a model is generated in the main file
 
             # Model registry does not work with file store
             # if tracking_url_type_store != "file":
@@ -128,13 +129,13 @@ class ModelTrainer:
         classification_train_metric=get_classification_score(y_true=y_train,y_pred=y_train_pred)
         
         ## Track the experiements with mlflow
-        self.track_mlflow(best_model,classification_train_metric)
+        self.track_mlflow(best_model,classification_train_metric,"train")
 
 
         y_test_pred=best_model.predict(x_test)
         classification_test_metric=get_classification_score(y_true=y_test,y_pred=y_test_pred)
 
-        # self.track_mlflow(best_model,classification_test_metric)
+        self.track_mlflow(best_model,classification_test_metric,"test")
 
         preprocessor = load_object(file_path=self.data_transformation_artifact.transformed_object_file_path)
             
